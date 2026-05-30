@@ -6,12 +6,14 @@ services:
     ports:
       - "5000:5000"
     volumes:
-      - /storage/seagate_500/xpenology-data:/storage
+      - /storage/kingmax_240/xpenology-data:/storage     # SSD = Primary (OS + Volume 1 - Hot Tier)
+      - /storage/seagate_500/xpenology-hdd:/storage2     # HDD = Secondary (Volume 2 - Cold Tier)
     devices:
       - /dev/kvm:/dev/kvm
     cap_add:
       - NET_ADMIN
     environment:
-      DISK_SIZE: "100G"
+      DISK_SIZE: "219G"      # SSD: toàn bộ dung lượng
+      DISK2_SIZE: "458G"     # HDD: toàn bộ dung lượng
       CPU_CORES: "4"
       RAM_SIZE: "4G"
