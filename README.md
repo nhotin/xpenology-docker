@@ -1,73 +1,126 @@
-# 🐳 Xpenology (Virtual-DSM) Docker Project
+# 🐳 Xpenology (Virtual DSM) Docker Project
 
-Dự án triển khai hệ điều hành NAS **Synology DiskStation Manager (DSM 7.2)** ảo hóa thông qua Docker, sử dụng công nghệ tăng tốc phần cứng **KVM** trực tiếp từ CPU Intel Core i5-12600KF trên nền tảng hệ điều hành Ubuntu Server 24.04.
-
----
-
-## 📌 1. Thông Tin Dịch Vụ & Đăng Nhập
-
-* **Địa chỉ truy cập:** [https://nas.nhotin.space](https://nas.nhotin.space)
-* **Cổng dịch vụ (Local Port):** `5000` (HTTP) / `5001` (HTTPS)
-* **Cơ chế xác thực:** Proxy qua Nginx Server & Cloudflare CDN (Mã hóa SSL Wildcard `*.nhotin.space`).
-* **Tài khoản quản trị:** Được lưu trữ bảo mật cục bộ trong tệp `.env` trên máy chủ (Không lưu trữ công khai, tệp `.env` được cấu hình loại trừ trong `.gitignore` để tránh bị commit lên GitHub).
-
+Triển khai hệ điều hành NAS Synology DiskStation Manager (DSM) dưới dạng máy ảo chạy trong môi trường Docker, sử dụng KVM Hardware Virtualization để đạt hiệu năng gần với phần cứng vật lý.
 
 ---
 
-## 🛠️ 2. Quản Lý Docker Container
+# 📌 1. Tổng Quan Dịch Vụ
 
-Thư mục làm việc: `/home/nhotin/svman/xpenology`
+Hệ thống cung cấp các tính năng:
 
-* **Khởi chạy dịch vụ (Chạy ngầm):**
-  ```bash
-  docker compose up -d
-  ```
-* **Dừng dịch vụ:**
-  ```bash
-  docker compose down
-  ```
-* **Xem logs hoạt động thời gian thực:**
-  ```bash
-  docker logs -f xpenology-dsm
-  ```
-* **Kiểm tra trạng thái sức khỏe container:**
-  ```bash
-  docker ps -a --filter name=xpenology-dsm
-  ```
+* Quản lý tập tin tập trung.
+* Chia sẻ dữ liệu nội bộ và từ xa.
+* Đồng bộ hóa dữ liệu đa thiết bị.
+* Sao lưu và phục hồi dữ liệu.
+* Quản lý người dùng và phân quyền truy cập.
+* Mở rộng thông qua hệ sinh thái ứng dụng DSM.
+
+Dịch vụ được công bố thông qua:
+
+* Reverse Proxy.
+* HTTPS/TLS Encryption.
+* Dynamic DNS (DDNS).
+* CDN hoặc DNS Proxy (tùy kiến trúc triển khai).
 
 ---
 
-## 🔀 3. Cấu Hình Nginx Reverse Proxy (Không giới hạn data)
+# 🛠️ 2. Quản Lý Docker
 
-Tệp cấu hình hệ thống: `/etc/nginx/sites-available/nas.nhotin.space.conf`
-Tệp cấu hình liên kết: `/etc/nginx/sites-enabled/nas.nhotin.space.conf`
+Khởi động dịch vụ:
 
-### Các tham số tối ưu hóa đặc biệt đã cấu hình:
-* **`client_max_body_size 0;`**: Vô hiệu hóa giới hạn dung lượng tải lên của Nginx, cho phép bạn upload tệp tin dung lượng lớn không giới hạn.
-* **Hỗ trợ WebSocket:** 
-  ```nginx
-  proxy_http_version 1.1;
-  proxy_set_header Upgrade $http_upgrade;
-  proxy_set_header Connection "upgrade";
-  ```
-  Giúp giao diện DSM đồng bộ dữ liệu thời gian thực mượt mà (biểu đồ CPU/RAM, tiến trình copy file...).
-* **`proxy_buffering off;`**: Tắt bộ đệm trung gian để dữ liệu truyền tải trực tiếp từ người dùng đến NAS với tốc độ tối đa của đường truyền.
-* **Thời gian chờ kết nối (`proxy_read_timeout 36000s`):** Đảm bảo kết nối không bị ngắt quãng khi truyền các tệp dung lượng cực lớn kéo dài nhiều giờ.
+```bash
+docker compose up -d
+```
+
+Dừng dịch vụ:
+
+```bash
+docker compose down
+```
+
+Khởi động lại:
+
+```bash
+docker compose restart
+```
+
+Xem logs:
+
+```bash
+docker logs -f <container-name>
+```
+
+Kiểm tra trạng thái container:
+
+```bash
+docker ps -a
+```
 
 ---
 
-## 🌐 4. Hệ Thống DDNS Tự Động Cập Nhật IP
+# 🔀 3. Reverse Proxy
 
-Dịch vụ sử dụng script Cloudflare API DDNS để tự động đồng bộ IP động của nhà mạng lên Cloudflare cho subdomain `nas.nhotin.space`.
+Hệ thống được triển khai phía sau Reverse Proxy nhằm:
 
-* **Thư mục quản lý DDNS:** `/home/nhotin/svman/cloudflare`
-* **Biến cấu hình bản ghi (`.env`):**
-  ```env
-  CF_RECORD_ID_NAS=26d84f4f39d912c93e30f1f990c128d9
-  ```
-* **Script thực thi:** `/home/nhotin/svman/cloudflare/update_ip.sh`
-* **Hoạt động:** Script được kích hoạt tự động qua **Cronjob** hệ thống. Khi phát hiện IP WAN thay đổi, script sẽ cập nhật bản ghi DNS của `nas.nhotin.space` cùng các subdomain khác lên Cloudflare hoàn toàn tự động.
+* Hỗ trợ HTTPS.
+* Hỗ trợ WebSocket.
+* Cân bằng tải và tối ưu hiệu năng.
+* Quản lý chứng chỉ SSL/TLS.
+* Công bố dịch vụ qua tên miền thay vì địa chỉ IP.
+
+Các tối ưu thường được áp dụng:
+
+* Upload file dung lượng lớn.
+* Tăng thời gian timeout cho các phiên truyền dữ liệu kéo dài.
+* Tắt buffering trong các tác vụ yêu cầu truyền tải thời gian thực.
+* Chuyển tiếp đầy đủ các header cần thiết cho DSM.
 
 ---
 
-*Tài liệu được khởi tạo và cập nhật thành công ngày 30/05/2026 bởi Antigravity.*
+# 🌐 4. Dynamic DNS (DDNS)
+
+Hệ thống hỗ trợ cơ chế DDNS nhằm:
+
+* Tự động cập nhật địa chỉ IP WAN.
+* Duy trì khả năng truy cập qua tên miền cố định.
+* Giảm nhu cầu cấu hình thủ công khi IP thay đổi.
+
+Việc cập nhật DNS có thể được thực hiện thông qua:
+
+* API của nhà cung cấp DNS.
+* Script tự động.
+* Scheduled Tasks hoặc Cron Jobs.
+
+---
+
+# 🔒 5. Bảo Mật
+
+Khuyến nghị:
+
+* Sử dụng HTTPS bắt buộc.
+* Bật xác thực hai lớp (2FA).
+* Giới hạn quyền truy cập theo nguyên tắc tối thiểu.
+* Cập nhật DSM và các package định kỳ.
+* Theo dõi nhật ký truy cập và hoạt động hệ thống.
+* Sao lưu dữ liệu và cấu hình thường xuyên.
+
+Không lưu trữ thông tin xác thực, khóa API hoặc dữ liệu nhạy cảm trong mã nguồn hoặc tài liệu công khai.
+
+---
+
+# 📦 6. Thành Phần Hệ Thống
+
+* Docker Engine
+* Docker Compose
+* Virtual DSM
+* KVM Virtualization
+* Reverse Proxy
+* DNS/DDNS Service
+* SSL/TLS Certificate
+* Monitoring & Logging (tùy chọn)
+
+---
+
+# 📄 Ghi Chú
+
+Tài liệu này mô tả kiến trúc và quy trình vận hành ở mức tổng quát. Các thông tin triển khai cụ thể như tên miền, địa chỉ máy chủ, thông tin xác thực, khóa API và cấu hình nội bộ cần được quản lý riêng trong môi trường vận hành.
