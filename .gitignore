@@ -1,0 +1,5 @@
+# Loại trừ tệp cấu hình chứa mật khẩu nhạy cảm
+.env
+
+# Loại trừ thư mục chứa đĩa ảo và dữ liệu Xpenology (100GB)
+data/

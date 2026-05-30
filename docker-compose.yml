@@ -1,0 +1,17 @@
+services:
+  dsm:
+    container_name: xpenology-dsm
+    image: vdsm/virtual-dsm:latest
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./data:/storage
+    devices:
+      - /dev/kvm:/dev/kvm
+    cap_add:
+      - NET_ADMIN
+    environment:
+      DISK_SIZE: "100G"
+      CPU_CORES: "4"
+      RAM_SIZE: "4G"
