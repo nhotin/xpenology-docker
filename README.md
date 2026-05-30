@@ -129,24 +129,38 @@ Tài liệu này mô tả kiến trúc và quy trình vận hành ở mức tổ
 
 # ⚡ 7. Lưu trữ Phân cấp (Storage Tiering - SSD / HDD)
 
-Do nhân kernel của Virtual-DSM trong môi trường ảo hóa không hỗ trợ trực tiếp tính năng SSD Cache của Synology (dễ gây lỗi treo đĩa), hệ thống đã được thiết lập theo phương án **Manual Storage Tiering** (Lưu trữ phân cấp thủ công) tối ưu:
+Do nhân kernel của Virtual-DSM trong môi trường ảo hóa không hỗ trợ trực tiếp tính năng SSD Cache của Synology (dễ gây lỗi treo đĩa), hệ thống được thiết kế theo phương án **Manual Storage Tiering** (Lưu trữ phân cấp thủ công) tối ưu:
 
-* **Volume 1 (SSD Kingmax - 219GB):** Dùng làm phân vùng chính chạy hệ điều hành DSM + lưu trữ nóng (**Hot Tier**). Hệ điều hành chạy trên SSD giúp giao diện mượt mà và tốc độ phản hồi cực nhanh.
-* **Volume 2 (HDD - 440GB):** Dùng làm phân vùng lưu trữ lâu dài (**Cold Tier**).
+* **Volume 1 (SSD - Hot Tier):** Dùng để cài đặt hệ điều hành DSM và làm tầng lưu trữ nóng. Hệ điều hành chạy trên SSD giúp giao diện mượt mà và tốc độ phản hồi cực nhanh.
+* **Volume 2 (HDD - Cold Tier):** Dùng làm phân vùng lưu trữ lớn lâu dài, tiết kiệm chi phí.
 
-### 🔄 Cơ chế hoạt động:
-* Tệp mới tải lên hoặc các tệp đang làm việc thường xuyên sẽ được lưu trên SSD (Volume 1) thông qua thư mục chia sẻ tên là `hot-store`.
-* Một script chạy tự động hàng đêm thông qua **Task Scheduler** của DSM sẽ quét thư mục `hot-store` này. Các tệp không được truy cập quá **90 ngày** sẽ được tự động chuyển sang thư mục `cold-store` trên HDD (Volume 2) để giải phóng dung lượng cho SSD.
+---
 
-### 🛠️ Thiết lập trên hệ thống:
+### 🔄 Quy trình Hoạt động Tự động
+
+#### 1. Quy trình làm việc hàng ngày (Máy tính ➡️ SSD)
+* Bất cứ khi nào bạn tạo mới, chỉnh sửa, hoặc sao chép file vào thư mục đồng bộ **`hot-store`** trên máy tính của mình.
+* Ứng dụng **Synology Drive Client** ngầm chạy trên máy tính sẽ tự động đồng bộ các file này lên NAS.
+* Dữ liệu được ghi thẳng vào phân vùng **SSD (Volume 1)** của NAS thông qua thư mục chia sẻ `/volume1/hot-store/`. Do sử dụng SSD, quá trình đồng bộ và truy cập dữ liệu hiện tại luôn đạt tốc độ nhanh nhất.
+
+#### 2. Quy trình phân tầng ngầm hàng đêm (SSD ➡️ HDD)
+* Hàng đêm (vào lúc `02:00 AM`), một tác vụ được thiết lập trong **Task Scheduler** của DSM sẽ tự động kích hoạt script `/volume1/scripts/storage_tiering.sh` với quyền `root`.
+* Script tiến hành quét thư mục `hot-store` trên SSD để tìm kiếm các tệp tin **không được truy cập (đọc/ghi) quá 90 ngày**.
+* Các tệp tin cũ được phát hiện sẽ được tự động chuyển (Move) từ đĩa **SSD (Volume 1)** sang đĩa **HDD (Volume 2)** trong thư mục chia sẻ `/volume2/cold-store/`.
+* Các thư mục rỗng trên SSD sẽ được tự động xóa để giải phóng hoàn toàn dung lượng cho SSD.
+* *Lưu ý:* Các file cũ sau khi chuyển sang HDD sẽ nằm ở thư mục `cold-store`. Bạn vẫn có thể truy cập chúng bất cứ lúc nào qua File Station hoặc qua kết nối mạng nội bộ (SMB) trỏ đến `cold-store`.
+
+---
+
+### 🛠️ Thiết lập trên hệ thống
 
 1. **Thư mục chia sẻ (Shared Folder) - Đã được tạo sẵn:**
-   * Thư mục `hot-store` lưu trên **Volume 1** (SSD).
-   * Thư mục `cold-store` lưu trên **Volume 2** (HDD).
-   *(Bạn không cần tạo lại các thư mục này nữa).*
+   * Thư mục **`hot-store`** lưu trên **Volume 1** (SSD).
+   * Thư mục **`cold-store`** lưu trên **Volume 2** (HDD).
+   * Cần bật tính năng **Team Folder** cho thư mục `hot-store` trong **Synology Drive Admin Console** trên Web DSM để ứng dụng máy tính có thể kết nối đồng bộ.
 
 2. **Thiết lập Script chạy tự động (Task Scheduler):**
-   * Đăng nhập Web DSM (`https://nas.nhotin.space`).
+   * Đăng nhập vào Web DSM của bạn (`https://<your-domain>`).
    * Vào **Control Panel** > **Task Scheduler**.
    * Chọn **Create** > **Scheduled Task** > **User-defined script**.
    * Phần **General**:

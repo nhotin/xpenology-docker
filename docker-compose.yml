@@ -5,6 +5,7 @@ services:
     restart: unless-stopped
     ports:
       - "5000:5000"
+      - "6690:6690"
     volumes:
       - /storage/kingmax_240/xpenology-data:/storage     # SSD = Primary (OS + Volume 1 - Hot Tier)
       - /storage/seagate_500/xpenology-hdd:/storage2     # HDD = Secondary (Volume 2 - Cold Tier)
